@@ -7,16 +7,26 @@ from django.db.models import Count
 class PostQuerySet(models.QuerySet):
 
     def popular(self):
-        return self.annotate(Count('likes')).order_by('-likes__count')
+        return self.annotate(likes_count=Count('likes')).\
+            order_by('-likes_count')
 
-    def fetch_with_comments_count(self):
+    def fetch_with_comments_count(self) -> list:
         posts_ids = [post.id for post in self]
-        posts_with_comments = Post.objects.filter(id__in=posts_ids) \
+
+        posts_with_comments = Post \
+            .objects.all() \
+            .filter(id__in=posts_ids) \
             .annotate(comments_count=Count('comments'))
-        ids_and_comments = posts_with_comments.values_list('id', 'comments_count')
+
+        ids_and_comments = posts_with_comments.values_list(
+            'id',
+            'comments_count'
+        )
         count_for_id = dict(ids_and_comments)
+
         for post in self:
             post.comments_count = count_for_id[post.id]
+
         return list(self)
 
 
@@ -27,9 +37,23 @@ class Post(models.Model):
     image = models.ImageField("Картинка")
     published_at = models.DateTimeField("Дата и время публикации")
 
-    author = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Автор", limit_choices_to={'is_staff': True})
-    likes = models.ManyToManyField(User, related_name="liked_posts", verbose_name="Кто лайкнул", blank=True)
-    tags = models.ManyToManyField("Tag", related_name="posts", verbose_name="Теги")
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name="Автор",
+        limit_choices_to={'is_staff': True}
+    )
+    likes = models.ManyToManyField(
+        User,
+        related_name="liked_posts",
+        verbose_name="Кто лайкнул",
+        blank=True
+    )
+    tags = models.ManyToManyField(
+        "Tag",
+        related_name="posts",
+        verbose_name="Теги"
+    )
 
     objects = PostQuerySet.as_manager()
 
@@ -48,7 +72,8 @@ class Post(models.Model):
 class TagQuerySet(models.QuerySet):
 
     def popular(self):
-        return self.annotate(Count('posts')).order_by('-posts__count')
+        return self.annotate(posts_count=Count('posts')).\
+            order_by('-posts_count')
 
 
 class Tag(models.Model):
@@ -72,8 +97,17 @@ class Tag(models.Model):
 
 
 class Comment(models.Model):
-    post = models.ForeignKey("Post", on_delete=models.CASCADE, verbose_name="Пост, к которому написан", related_name="comments")
-    author = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Автор")
+    post = models.ForeignKey(
+        "Post",
+        on_delete=models.CASCADE,
+        verbose_name="Пост, к которому написан",
+        related_name="comments"
+    )
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name="Автор"
+    )
 
     text = models.TextField("Текст комментария")
     published_at = models.DateTimeField("Дата и время публикации")

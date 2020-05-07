@@ -1,14 +1,7 @@
+from django.db.models import Prefetch
 from django.shortcuts import render
-from blog.models import Comment, Post, Tag
-from django.db.models import Count, Prefetch
 
-
-def get_likes_count(post):
-    return post.likes__count
-
-
-def get_related_posts_count(tag):
-    return tag.posts.count()
+from blog.models import Post, Tag
 
 
 def serialize_post(post):
